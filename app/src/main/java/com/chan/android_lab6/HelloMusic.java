@@ -79,18 +79,16 @@ public class HelloMusic extends AppCompatActivity {
         Status = (TextView)findViewById(R.id.status);
         mp = MusicService.mp;
         CoverImageView = findViewById(R.id.Album_cover_image);
-        CoverAnima = ObjectAnimator.ofFloat(CoverImageView, "rotation", 0.0F, 359.0F);
+        CoverAnima = ObjectAnimator.ofFloat(CoverImageView, "rotation", 0.0F, 360.0F);
         CoverAnima.setDuration(3000);
         CoverAnima.setInterpolator(new LinearInterpolator());
         CoverAnima.setRepeatCount(-1);
         CoverAnima.start();
         CoverAnima.pause();
-        rotateStartFlag = true;
 
         toServiceIntent = new Intent(this, MusicService.class);
         verifyStoragePermissions(HelloMusic.this);
-        Intent intent = new Intent(this, MusicService.class);
-        startService(intent);
+        startService(toServiceIntent);
         this.getApplicationContext().bindService(toServiceIntent, SC, Context.BIND_AUTO_CREATE);
 
         mHandler = new Handler(){
@@ -110,6 +108,9 @@ public class HelloMusic extends AppCompatActivity {
                             seekBar.setMax(fulltime);
                             FullTime.setText(TimeDF.format(fulltime));
                             CurrTime.setText(TimeDF.format(currtime));
+                            if(reply.readInt() == 1){
+                                CoverAnima.resume();
+                            }
                         }catch(RemoteException e){
                             e.printStackTrace();
                         }
@@ -127,7 +128,7 @@ public class HelloMusic extends AppCompatActivity {
                     }catch (InterruptedException e){
                         e.printStackTrace();
                     }
-                    if(SC != null){
+                    if(SC != null && hasPermission == true){
                         mHandler.obtainMessage(123).sendToTarget();
                     }
                 }
@@ -158,14 +159,9 @@ public class HelloMusic extends AppCompatActivity {
                 if(v.getTag().equals("1")){
                     Status.setText("paused");
                     CoverAnima.pause();
-                    rotateStartFlag = false;
                 }else{
                     Status.setText("playing");
-                    if(rotateStartFlag){
-                        CoverAnima.start();
-                    }else{
-                        CoverAnima.resume();
-                    }
+                    CoverAnima.resume();
                 }
             }
         });
@@ -185,8 +181,9 @@ public class HelloMusic extends AppCompatActivity {
                 PlayBtn.setTag("1");
                 Status.setText("stopped");
                 CoverAnima.end();
-                rotateStartFlag = true;
-                Toast.makeText(HelloMusic.this, "stop", Toast.LENGTH_LONG).show();
+                CoverAnima.start();
+                CoverAnima.pause();
+//                Toast.makeText(HelloMusic.this, "stop", Toast.LENGTH_LONG).show();
             }
         });
 
@@ -244,6 +241,7 @@ public class HelloMusic extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int reqestCode, String permissions[], int[] grantResults){
         if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+            hasPermission =  true;
             try{
                 int code = 106;
                 Parcel data = Parcel.obtain();
@@ -254,6 +252,7 @@ public class HelloMusic extends AppCompatActivity {
             }
         }else{
             Toast.makeText(HelloMusic.this, "没法听歌了", Toast.LENGTH_LONG).show();
+            HelloMusic.this.finish();
             System.exit(0);
         }
     }
