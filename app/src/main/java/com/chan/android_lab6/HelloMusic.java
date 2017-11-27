@@ -10,6 +10,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -255,7 +256,20 @@ public class HelloMusic extends AppCompatActivity {
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == 1) {
                 Uri uri = data.getData();
-                Toast.makeText(this, "文件路径："+uri.getPath().toString(), Toast.LENGTH_SHORT).show();
+                String Path = uri.getPath().toString();
+                int cutPos = Path.indexOf(':');
+                Path = Path.substring(cutPos+1);
+                Path = "/"+Path;
+                Toast.makeText(this, "文件路径："+Path, Toast.LENGTH_SHORT).show();
+                try{
+                    int code = 107;
+                    Parcel send = Parcel.obtain();
+                    Parcel reply = Parcel.obtain();
+                    send.writeString(Path);
+                    mbinder.transact(code, send, reply,0);
+                }catch(RemoteException e){
+                    e.printStackTrace();
+                }
             }
         }
     }

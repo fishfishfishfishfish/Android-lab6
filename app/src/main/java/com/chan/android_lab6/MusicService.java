@@ -45,7 +45,6 @@ public class MusicService extends Service {
                 case 102:
                     //stop
                     if(mp != null){
-//                        mp.stop();  // 调用后MusicPlayer不能再播放音频
                         mp.reset();
                         try{
                             mp.setDataSource(musicPath);
@@ -85,6 +84,21 @@ public class MusicService extends Service {
                         mp.prepare();
                     }catch (Exception e){
                         e.printStackTrace();
+                    }
+                    break;
+                case 107:
+                    //get new file
+                    musicPath = data.readString();
+                    musicPath = Environment.getExternalStorageDirectory() + musicPath;
+                    if(mp != null){
+                        mp.reset();
+                        try{
+                            mp.setDataSource(musicPath);
+                            mp.prepare();
+                            mp.seekTo(0);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
                     }
                     break;
             }
