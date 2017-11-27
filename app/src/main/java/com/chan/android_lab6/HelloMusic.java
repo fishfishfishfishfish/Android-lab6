@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -49,7 +50,6 @@ public class HelloMusic extends AppCompatActivity {
     Handler mHandler;
     ImageView CoverImageView;
     ObjectAnimator CoverAnima;
-    boolean rotateStartFlag;
     Intent toServiceIntent;
 
     private ServiceConnection SC = new ServiceConnection() {
@@ -236,6 +236,28 @@ public class HelloMusic extends AppCompatActivity {
 
             }
         });
+
+        CoverImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //from http://blog.csdn.net/dezhihuang/article/details/53282820
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("audio/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(intent,1);
+            }
+        });
+    }// end onCreate
+
+    //from http://blog.csdn.net/dezhihuang/article/details/53282820
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == 1) {
+                Uri uri = data.getData();
+                Toast.makeText(this, "文件路径："+uri.getPath().toString(), Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
