@@ -8,6 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Environment;
@@ -16,6 +19,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.RemoteException;
+import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -33,6 +37,8 @@ import java.sql.Time;
 import java.text.SimpleDateFormat;
 
 public class HelloMusic extends AppCompatActivity {
+    public static final int CHOOSE_PHOTO = 2;
+    public static final int CHOOSE_MUSIC = 1;
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSIONS_STORAGE = {
             "android.permission.READ_EXTERNAL_STORAGE",
@@ -242,10 +248,25 @@ public class HelloMusic extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //from http://blog.csdn.net/dezhihuang/article/details/53282820
+                PlayBtn.setText("PLAY");
+                PlayBtn.setTag("1");
+                Status.setText("stopped");
+                CoverAnima.end();
+                CoverAnima.start();
+                CoverAnima.pause();
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("audio/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                startActivityForResult(intent,1);
+                startActivityForResult(intent,CHOOSE_MUSIC);
+            }
+        });
+        CoverImageView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                //启动相册
+                Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(intent, CHOOSE_PHOTO);
+                return true;
             }
         });
     }// end onCreate
@@ -254,22 +275,44 @@ public class HelloMusic extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == 1) {
-                Uri uri = data.getData();
-                String Path = uri.getPath().toString();
-                int cutPos = Path.indexOf(':');
-                Path = Path.substring(cutPos+1);
-                Path = "/"+Path;
-                Toast.makeText(this, "文件路径："+Path, Toast.LENGTH_SHORT).show();
-                try{
-                    int code = 107;
-                    Parcel send = Parcel.obtain();
-                    Parcel reply = Parcel.obtain();
-                    send.writeString(Path);
-                    mbinder.transact(code, send, reply,0);
-                }catch(RemoteException e){
-                    e.printStackTrace();
-                }
+            switch (requestCode){
+                case CHOOSE_MUSIC:
+                    Uri uri = data.getData();
+                    String Path = uri.getPath().toString();
+                    int cutPos = Path.indexOf(':');
+                    Path = Path.substring(cutPos+1);
+                    Path = "/"+Path;
+                    Toast.makeText(this, "文件路径："+Path, Toast.LENGTH_SHORT).show();
+                    try{
+                        int code = 107;
+                        Parcel send = Parcel.obtain();
+                        Parcel reply = Parcel.obtain();
+                        send.writeString(Path);
+                        mbinder.transact(code, send, reply,0);
+                    }catch(RemoteException e){
+                        e.printStackTrace();
+                    }
+                    break;
+                case CHOOSE_PHOTO:
+                    //获取图片地址 from: http://blog.csdn.net/w18756901575/article/details/52085157
+                    Uri selectedImage = data.getData();
+                    String[] filePathColumns = {MediaStore.Images.Media.DATA};
+                    Cursor cursor = getContentResolver().query(selectedImage, filePathColumns, null, null, null);
+                    cursor.moveToFirst();
+                    int columnIndex = cursor.getColumnIndex(filePathColumns[0]);
+                    String imagePath = cursor.getString(columnIndex);
+                    //修改图片大小 from: http://blog.csdn.net/adam_ling/article/details/52346741
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds = true; // 只获取图片的大小信息，而不是将整张图片载入在内存中，避免内存溢出
+                    BitmapFactory.decodeFile(imagePath, options); // 解码出图片边长
+                    int inSampleSize = calSampeSize(options.outHeight, options.outWidth); // 计算压缩比例
+                    options.inJustDecodeBounds = false; // 计算好压缩比例后，这次可以去加载原图了
+                    options.inSampleSize = inSampleSize; // 设置为刚才计算的压缩比例
+                    Bitmap bm = BitmapFactory.decodeFile(imagePath, options); // 解码文件
+//                    Log.w("TAG", "size: " + bm.getByteCount() + " width: " + bm.getWidth() + " heigth:" + bm.getHeight()); // 输出图像数据
+                    CoverImageView.setImageBitmap(bm);
+                    cursor.close();
+                    break;
             }
         }
     }
@@ -306,6 +349,16 @@ public class HelloMusic extends AppCompatActivity {
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    private int calSampeSize(int height, int width){
+        int inSampleSize = 2; // 默认像素压缩比例，压缩为原图的1/2
+        int minLen = Math.min(height, width); // 原图的最小边长
+        if(minLen > 300) { // 如果原始图像的最小边长大于100dp（此处单位我认为是dp，而非px）
+            float ratio = (float)minLen / 300.0f; // 计算像素压缩比例
+            inSampleSize = (int)ratio;
+        }
+        return inSampleSize;
     }
 }
 
