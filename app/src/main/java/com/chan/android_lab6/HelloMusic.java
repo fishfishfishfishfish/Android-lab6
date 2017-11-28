@@ -45,7 +45,6 @@ public class HelloMusic extends AppCompatActivity {
             "android.permission.WRITE_EXTERNAL_STORAGE" };
     static boolean hasPermission = false;
     private MusicService.MyBinder mbinder;
-    private MediaPlayer mp;
     Button PlayBtn;
     Button StopBtn;
     Button QuitBtn;
@@ -58,11 +57,13 @@ public class HelloMusic extends AppCompatActivity {
     ImageView CoverImageView;
     ObjectAnimator CoverAnima;
     Intent toServiceIntent;
+    Boolean ServiceConnectedFlag = false;
 
     private ServiceConnection SC = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d("service", "connected");
+            ServiceConnectedFlag = true;
             mbinder = (MusicService.MyBinder)service;
         }
 
@@ -84,7 +85,6 @@ public class HelloMusic extends AppCompatActivity {
         FullTime = (TextView)findViewById(R.id.full_time_textview);
         CurrTime = (TextView)findViewById(R.id.curr_time_textview);
         Status = (TextView)findViewById(R.id.status);
-        mp = MusicService.mp;
         CoverImageView = findViewById(R.id.Album_cover_image);
         CoverAnima = ObjectAnimator.ofFloat(CoverImageView, "rotation", 0.0F, 360.0F);
         CoverAnima.setDuration(3000);
@@ -97,6 +97,9 @@ public class HelloMusic extends AppCompatActivity {
         verifyStoragePermissions(HelloMusic.this);
         startService(toServiceIntent);
         this.getApplicationContext().bindService(toServiceIntent, SC, Context.BIND_AUTO_CREATE);
+        if(ServiceConnectedFlag == false){
+            this.getApplicationContext().bindService(toServiceIntent, SC, Context.BIND_AUTO_CREATE);
+        }
 
         mHandler = new Handler(){
             @Override
